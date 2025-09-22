@@ -267,6 +267,17 @@
   )
 )
 
+(define-public (cancel-bounty (bounty-id uint))
+  (let ((bounty (unwrap! (map-get? bounties bounty-id) ERR-BOUNTY-NOT-FOUND)))
+    (asserts! (is-eq tx-sender (get creator bounty)) ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq (get status bounty) "open") ERR-INVALID-STATUS)
+    (asserts! (is-none (get assignee bounty)) ERR-INVALID-STATUS)
+    (try! (as-contract (stx-transfer? (get amount bounty) tx-sender (get creator bounty))))
+    (map-set bounties bounty-id (merge bounty { status: "cancelled" }))
+    (ok true)
+  )
+)
+
 (define-public (distribute-royalties (project-id uint))
   (let ((project (unwrap! (map-get? projects project-id) ERR-PROJECT-NOT-FOUND))
         (contract-balance (stx-get-balance (as-contract tx-sender))))
