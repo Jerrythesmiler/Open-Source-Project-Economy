@@ -10,6 +10,7 @@
 (define-constant ERR-NO-CONTRIBUTIONS (err u1010))
 
 (define-constant CONTRACT-OWNER tx-sender)
+(define-constant REFERRAL-REWARD u5)
 (define-constant MIN-STAKE-AMOUNT u1000000)
 (define-constant MAX-ROYALTY-PERCENTAGE u25)
 
@@ -141,7 +142,7 @@
   )
 )
 
-(define-public (register-contributor (github-username (string-ascii 50)))
+(define-public (register-contributor (github-username (string-ascii 50)) (referrer (optional principal)))
   (begin
     (asserts! (is-none (map-get? contributors tx-sender)) ERR-ALREADY-EXISTS)
     (map-set contributors tx-sender
@@ -153,7 +154,17 @@
         is-verified: false
       }
     )
-    (ok true)
+    (match referrer
+      ref (let ((referrer-data (unwrap! (map-get? contributors ref) (ok true))))
+            (asserts! (not (is-eq ref tx-sender)) (ok true))
+            (asserts! (get is-verified referrer-data) (ok true))
+            (map-set contributors ref
+              (merge referrer-data { reputation-score: (+ (get reputation-score referrer-data) REFERRAL-REWARD) })
+            )
+            (ok true)
+          )
+      (ok true)
+    )
   )
 )
 
